@@ -274,17 +274,25 @@ namespace tracktion::inline engine
             void postAutomationChange (AutomatableParameter& param, TimePosition time, float value) override
             {
                 TRACKTION_ASSERT_MESSAGE_THREAD
-                const juce::ScopedLock sl (lock);
 
-                for (auto p : recordedParams)
                 {
-                    if (&p->parameter == &param)
+                    const juce::ScopedLock sl (lock);
+
+                    for (auto p : recordedParams)
                     {
-                        p->changes.add (AutomationParamData::Change (time, value));
-                        p->changed();
-                        break;
+                        if (&p->parameter == &param)
+                        {
+                            p->changes.add (AutomationParamData::Change (time, value));
+                            p->changed();
+                            break;
+                        }
                     }
                 }
+
+                // Flush immediately so the curve is updated for real-time rendering.
+                // The 10Hz timer still runs to extend the last value forward when
+                // the user isn't actively moving the parameter.
+                flushAutomation();
             }
 
             void punchOut (AutomatableParameter& param, bool toEnd)
